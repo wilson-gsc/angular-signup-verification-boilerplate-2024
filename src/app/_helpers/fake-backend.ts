@@ -3,12 +3,12 @@ import { HttpRequest, HttpResponse, HttpHandler, HttpEvent, HttpInterceptor, HTT
 import { Observable, of, throwError } from 'rxjs';
 import { delay, materialize, dematerialize } from 'rxjs/operators';
 
-import { AlertService } from '@app/_services';
-import { Role } from '@app/_models';
+import { AlertService } from '../_services';
+import { Role } from '../_models';
 
 // array in local storage for accounts
 const accountsKey = 'angular-10-signup-verification-boilerplate-accounts';
-let accounts = JSON.parse(localStorage.getItem(accountsKey)) || [];
+let accounts: any[] = JSON.parse(localStorage.getItem(accountsKey) ?? '[]');
 
 @Injectable()
 export class FakeBackendInterceptor implements HttpInterceptor {
@@ -349,11 +349,13 @@ export class FakeBackendInterceptor implements HttpInterceptor {
         function currentAccount() {
             // check if jwt token is in auth header
             const authHeader = headers.get('Authorization');
-            if (!authHeader.startsWith('Bearer fake-jwt-token')) return;
+            if (!authHeader || !authHeader.startsWith('Bearer fake-jwt-token')) return;
 
             // check if token is expired
-            const jwtToken = JSON.parse(atob(authHeader.split('.')[1]));
-            const tokenExpired = Date.now() > (jwtToken.exp * 1000);
+            const tokenParts = authHeader.split('.');
+            if (tokenParts.length < 2) return;
+            const jwtToken = JSON.parse(atob(tokenParts[1]));
+            const tokenExpired = Date.now() > (jwtToken.exp * 1000);            
             if (tokenExpired) return;
 
             const account = accounts.find(x => x.id === jwtToken.id);

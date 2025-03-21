@@ -3,9 +3,12 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { first } from 'rxjs/operators';
 
-import { AccountService, AlertService } from '@app/_services';
+import { AccountService, AlertService } from '../_services';
 
-@Component({ templateUrl: 'login.component.html' })
+@Component({
+    templateUrl: 'login.component.html',
+    standalone: false
+})
 export class LoginComponent implements OnInit {
     form: UntypedFormGroup;
     loading = false;

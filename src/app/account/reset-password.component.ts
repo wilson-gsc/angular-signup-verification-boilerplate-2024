@@ -3,8 +3,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { first } from 'rxjs/operators';
 
-import { AccountService, AlertService } from '@app/_services';
-import { MustMatch } from '@app/_helpers';
+import { AccountService, AlertService } from '../_services';
+import { MustMatch } from '../_helpers';
 
 enum TokenStatus {
     Validating,
@@ -12,11 +12,14 @@ enum TokenStatus {
     Invalid
 }
 
-@Component({ templateUrl: 'reset-password.component.html' })
+@Component({
+    templateUrl: 'reset-password.component.html',
+    standalone: false
+})
 export class ResetPasswordComponent implements OnInit {
     TokenStatus = TokenStatus;
     tokenStatus = TokenStatus.Validating;
-    token = null;
+    token: string | null = null;
     form: UntypedFormGroup;
     loading = false;
     submitted = false;
@@ -37,10 +40,12 @@ export class ResetPasswordComponent implements OnInit {
             validator: MustMatch('password', 'confirmPassword')
         });
 
-        const token = this.route.snapshot.queryParams['token'];
+        const tokenFromQuery = this.route.snapshot.queryParams['token'];
+        const token = typeof tokenFromQuery === 'string' ? tokenFromQuery : null;
 
         // remove token from url to prevent http referer leakage
         this.router.navigate([], { relativeTo: this.route, replaceUrl: true });
+        if (!token) return this.tokenStatus = TokenStatus.Invalid;
 
         this.accountService.validateResetToken(token)
             .pipe(first())
@@ -70,7 +75,7 @@ export class ResetPasswordComponent implements OnInit {
         }
 
         this.loading = true;
-        this.accountService.resetPassword(this.token, this.f.password.value, this.f.confirmPassword.value)
+        this.accountService.resetPassword(this.token!, this.f.password.value, this.f.confirmPassword.value)
             .pipe(first())
             .subscribe({
                 next: () => {

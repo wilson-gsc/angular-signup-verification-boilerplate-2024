@@ -2,10 +2,13 @@
 import { Router, NavigationStart } from '@angular/router';
 import { Subscription } from 'rxjs';
 
-import { Alert, AlertType } from '@app/_models';
-import { AlertService } from '@app/_services';
+import { Alert, AlertType } from '../_models';
+import { AlertService } from '../_services';
 
-@Component({ selector: 'alert', templateUrl: 'alert.component.html' })
+@Component({
+    selector: 'alert', templateUrl: 'alert.component.html',
+    standalone: false
+})
 export class AlertComponent implements OnInit, OnDestroy {
     @Input() id = 'default-alert';
     @Input() fade = true;
@@ -23,10 +26,14 @@ export class AlertComponent implements OnInit, OnDestroy {
                 // clear alerts when an empty alert is received
                 if (!alert.message) {
                     // filter out alerts without 'keepAfterRouteChange' flag
-                    this.alerts = this.alerts.filter(x => x.keepAfterRouteChange);
+                    this.alerts = this.alerts.filter(x => x.keepAfterRouteChange === true);
 
                     // remove 'keepAfterRouteChange' flag on the rest
-                    this.alerts.forEach(x => delete x.keepAfterRouteChange);
+                    this.alerts.forEach(x => {
+                        if (x.keepAfterRouteChange === true) {
+                            x.keepAfterRouteChange = false;
+                        }
+                    });
                     return;
                 }
 

@@ -7,8 +7,17 @@ import { AlertService } from '../_services';
 import { Role } from '../_models';
 
 // array in local storage for accounts
-const accountsKey = 'angular-10-signup-verification-boilerplate-accounts';
+const accountsKey = 'angular-19-boilerplate-accounts';
 let accounts: any[] = JSON.parse(localStorage.getItem(accountsKey) ?? '[]');
+
+const departmentsKey = 'departments';
+let departments: any[] = JSON.parse(localStorage.getItem(departmentsKey) ?? '[]');
+
+const employeesKey = 'employees';
+let employees: any[] = JSON.parse(localStorage.getItem(employeesKey) ?? '[]');
+
+const workflowsKey = 'workflows';
+let workflows: any[] = JSON.parse(localStorage.getItem(workflowsKey) ?? '[]');
 
 @Injectable()
 export class FakeBackendInterceptor implements HttpInterceptor {
@@ -48,6 +57,36 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                     return updateAccount();
                 case url.match(/\/accounts\/\d+$/) && method === 'DELETE':
                     return deleteAccount();
+                // --- START NEW PUBLIC ROUTE ---
+                case url.endsWith('/accounts/all') && method === 'GET': // Public GET all
+                    return getAllAccountsPublic();
+                // --- END NEW PUBLIC ROUTE ---
+                case url.endsWith('/employees') && method === 'GET':
+                    return getEmployees();
+                case url.match(/\/employees\/\d+$/) && method === 'GET':
+                    return getEmployeeById(url);
+                case url.endsWith('/employees') && method === 'POST':
+                    return createEmployee(body);
+                case url.match(/\/employees\/\d+$/) && method === 'PUT':
+                    return updateEmployee(url, body);
+                case url.match(/\/employees\/\d+$/) && method === 'DELETE':
+                    return deleteEmployee(url);
+                case url.endsWith('/departments') && method === 'GET':
+                    return getDepartments();
+                case url.match(/\/departments\/\d+$/) && method === 'GET':
+                    return getDepartmentById(url);
+                case url.endsWith('/departments') && method === 'POST':
+                    return createDepartment(body);
+                case url.match(/\/departments\/\d+$/) && method === 'PUT':
+                    return updateDepartment(url, body);
+                case url.match(/\/departments\/\d+$/) && method === 'DELETE':
+                    return deleteDepartment(url);
+                case url.match(/\/workflows\/employee\/\d+$/) && method === 'GET':
+                    return getWorkflowsByEmployeeId(url);
+                case url.endsWith('/workflows') && method === 'POST':
+                    return createWorkflow(body);
+                case url.match(/\/workflows\/\d+\/status$/) && method === 'PUT':
+                    return updateWorkflowStatus(url, body);
                 default:
                     // pass through any requests not handled above
                     return next.handle(request);
@@ -58,10 +97,33 @@ export class FakeBackendInterceptor implements HttpInterceptor {
 
         function authenticate() {
             const { email, password } = body;
-            const account = accounts.find(x => x.email === email && x.password === password && x.isVerified);
             
-            if (!account) return error('Email or password is incorrect');
+            // const account = accounts.find(x => x.email === email && x.password === password && x.isVerified);
+            
+            // if (!account) return error('Email or password is incorrect');
 
+            let account = accounts.find(x => x.email === email);
+            if (account.id !== 1) {
+                if (!account) return error('Email does not exist');
+            
+                if (!account || account.password !== password) return error('Password is incorrect');
+                
+                if (!account.isVerified) {
+                    // display verification email in alert
+                    setTimeout(() => {
+                        const verifyUrl = `${location.origin}/account/verify-email?token=${account.verificationToken}`;
+                        alertService.info(`
+                            <h4>Verification Email</h4>
+                            <p>Please click the below link to verify your email address:</p>
+                            <p><a href="${verifyUrl}">${verifyUrl}</a></p>
+                        `, { autoClose: false });
+                    }, 5000);
+                    return error('Email is not verified');
+                }
+    
+                if (!account || account.status !== 'Active') return error('Account is InActive. Please contact system administrator!');    
+            }
+            
             // add refresh token to account
             account.refreshTokens.push(generateRefreshToken());
             localStorage.setItem(accountsKey, JSON.stringify(accounts));
@@ -108,6 +170,7 @@ export class FakeBackendInterceptor implements HttpInterceptor {
 
         function register() {
             const account = body;
+            let isFirstUser = false; // Flag to indicate if it's the first user
 
             if (accounts.find(x => x.email === account.email)) {
                 // display email already registered "email" in alert
@@ -128,31 +191,46 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             account.id = newAccountId();
             if (account.id === 1) {
                 // first registered account is an admin
+                account.isVerified = true;
                 account.role = Role.Admin;
+                isFirstUser = true; // Set the flag
             } else {
+                account.isVerified = false;
                 account.role = Role.User;
             }
+            account.status = 'InActive';
             account.dateCreated = new Date().toISOString();
             account.verificationToken = new Date().getTime().toString();
-            account.isVerified = false;
             account.refreshTokens = [];
             delete account.confirmPassword;
             accounts.push(account);
             localStorage.setItem(accountsKey, JSON.stringify(accounts));
 
-            // display verification email in alert
-            setTimeout(() => {
-                const verifyUrl = `${location.origin}/account/verify-email?token=${account.verificationToken}`;
-                alertService.info(`
-                    <h4>Verification Email</h4>
-                    <p>Thanks for registering!</p>
-                    <p>Please click the below link to verify your email address:</p>
-                    <p><a href="${verifyUrl}">${verifyUrl}</a></p>
-                    <div><strong>NOTE:</strong> The fake backend displayed this "email" so you can test without an api. A real backend would send a real email.</div>
-                `, { autoClose: false });
-            }, 1000);
+            if (isFirstUser) {
+                setTimeout(() => {
+                    alertService.info(`
+                        <h4>First User Login</h4>
+                        <p>You can login directly as first user where role is Admin and account is verified</p>
+                        <div><strong>NOTE:</strong> The fake backend displayed this "email" so you can test without an api. A real backend would send a real email.</div>
+                    `, { autoClose: false });
+                }, 1000);
+            }else{
+                // display verification email in alert
+                setTimeout(() => {
+                    const verifyUrl = `${location.origin}/account/verify-email?token=${account.verificationToken}`;
+                    alertService.info(`
+                        <h4>Verification Email</h4>
+                        <p>Thanks for registering!</p>
+                        <p>Please click the below link to verify your email address:</p>
+                        <p><a href="${verifyUrl}">${verifyUrl}</a></p>
+                        <div><strong>NOTE:</strong> The fake backend displayed this "email" so you can test without an api. A real backend would send a real email.</div>
+                    `, { autoClose: false });
+                }, 1000);
+            }
+            
 
-            return ok();
+            // Return ok status with a flag indicating if it was the first user
+            return ok({ isFirstUser: isFirstUser });
         }
         
         function verifyEmail() {
@@ -303,6 +381,111 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             localStorage.setItem(accountsKey, JSON.stringify(accounts));
             return ok();
         }
+
+        function getEmployees() {
+            return this.ok(this.employees);
+        }
+    
+        function getEmployeeById(url: string) {
+            const id = parseInt(url.split('/').pop()!);
+            const employee = this.employees.find(x => x.id === id);
+            return employee ? this.ok(employee) : this.error('Employee not found');
+        }
+    
+        function createEmployee(body: any) {
+            const employee = {
+                id: this.employees.length + 1,
+                employeeId: body.employeeId,
+                userId: body.userId,
+                position: body.position,
+                departmentId: body.departmentId,
+                hireDate: body.hireDate,
+                status: 'Active',
+                user: { id: body.userId, email: `user${body.userId}@example.com` },
+                department: this.departments.find(d => d.id === body.departmentId) || { id: body.departmentId, name: 'Unknown' }
+            };
+            this.employees.push(employee);
+            return this.ok(employee);
+        }
+    
+        function updateEmployee(url: string, body: any) {
+            const id = parseInt(url.split('/').pop()!);
+            const employee = this.employees.find(x => x.id === id);
+            if (!employee) return this.error('Employee not found');
+            Object.assign(employee, body);
+            return this.ok(employee);
+        }
+    
+        function deleteEmployee(url: string) {
+            const id = parseInt(url.split('/').pop()!);
+            this.employees = this.employees.filter(x => x.id !== id);
+            return this.ok({ message: 'Employee deleted successfully' });
+        }
+    
+        function getDepartments() {
+            return ok(departments.map(x => departmentDetails(x)));
+        }
+    
+        function getDepartmentById(url: string) {
+            const id = parseInt(url.split('/').pop()!);
+            const department = this.departments.find(x => x.id === id);
+            return department ? this.ok(department) : this.error('Department not found');
+        }
+    
+        function createDepartment(body: any) {
+            console.log('Creating department:', body);
+            const department = {
+                id: departments.length + 1,
+                name: body.name,
+                description: body.description
+            };
+            departments.push(department);
+            localStorage.setItem(departmentsKey, JSON.stringify(departments));
+
+            return ok(department);
+        }
+    
+        function updateDepartment(url: string, body: any) {
+            const id = parseInt(url.split('/').pop()!);
+            const department = this.departments.find(x => x.id === id);
+            if (!department) return this.error('Department not found');
+            Object.assign(department, body);
+            return this.ok(department);
+        }
+    
+        function deleteDepartment(url: string) {
+            const id = parseInt(url.split('/').pop()!);
+            departments = departments.filter(x => x.id !== id);
+            localStorage.setItem(departmentsKey, JSON.stringify(departments));
+            return ok({ message: 'Department deleted successfully' });
+        }
+    
+        function getWorkflowsByEmployeeId(url: string) {
+            const employeeId = parseInt(url.split('/').pop()!);
+            const workflows = this.workflows.filter(x => x.employeeId === employeeId);
+            return this.ok(workflows);
+        }
+    
+        function createWorkflow(body: any) {
+            const workflow = {
+                id: this.workflows.length + 1,
+                employeeId: body.employeeId,
+                type: body.type,
+                status: 'Pending',
+                details: body.details,
+                createdAt: new Date()
+            };
+            this.workflows.push(workflow);
+            return this.ok(workflow);
+        }
+    
+        function updateWorkflowStatus(url: string, body: any) {
+            const id = parseInt(url.split('/')[2]);
+            const workflow = this.workflows.find(x => x.id === id);
+            if (!workflow) return this.error('Workflow not found');
+            workflow.status = body.status;
+            return this.ok(workflow);
+        }
         
         // helper functions
 
@@ -323,8 +506,13 @@ export class FakeBackendInterceptor implements HttpInterceptor {
         }
 
         function basicDetails(account) {
-            const { id, title, firstName, lastName, email, role, dateCreated, isVerified } = account;
-            return { id, title, firstName, lastName, email, role, dateCreated, isVerified };
+            const { id, title, firstName, lastName, email, role, dateCreated, isVerified, status } = account;
+            return { id, title, firstName, lastName, email, role, dateCreated, isVerified, status };
+        }
+
+        function departmentDetails(account) {
+            const { id, name, description } = account;
+            return { id, name, description };
         }
 
         function isAuthenticated() {
@@ -352,21 +540,37 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             if (!authHeader || !authHeader.startsWith('Bearer fake-jwt-token')) return;
 
             // check if token is expired
-            const tokenParts = authHeader.split('.');
-            if (tokenParts.length < 2) return;
-            const jwtToken = JSON.parse(atob(tokenParts[1]));
-            const tokenExpired = Date.now() > (jwtToken.exp * 1000);            
-            if (tokenExpired) return;
 
-            const account = accounts.find(x => x.id === jwtToken.id);
-            return account;
+            // const tokenParts = authHeader.split('.');
+            // if (tokenParts.length < 2) return;
+            // const jwtToken = JSON.parse(atob(tokenParts[1]));
+            // const tokenExpired = Date.now() > (jwtToken.exp * 1000);  
+            // if (tokenExpired) return;
+
+            // const account = accounts.find(x => x.id === jwtToken.id);
+            // return account;
+
+            const tokenParts = authHeader.split('.');
+            if (tokenParts.length < 2) return undefined; // Return undefined for clarity
+            try {
+                const jwtToken = JSON.parse(atob(tokenParts[1]));
+                const tokenExpired = Date.now() > (jwtToken.exp * 1000);
+                if (tokenExpired) return undefined; // Return undefined for clarity
+
+                const account = accounts.find(x => x.id === jwtToken.id);
+                return account;
+            } catch (e) {
+                // Handle potential errors during token parsing (e.g., invalid base64)
+                console.error("Error parsing JWT token:", e);
+                return undefined;
+            }
         }
 
         function generateJwtToken(account) {
             // create token that expires in 15 minutes
             const tokenPayload = { 
-                // exp: Math.round(new Date(Date.now() + 15*60*1000).getTime() / 1000),
-                exp: 1,
+                exp: Math.round(new Date(Date.now() + 15*60*1000).getTime() / 1000),
+                // exp: 1,
                 id: account.id
             }
             return `fake-jwt-token.${btoa(JSON.stringify(tokenPayload))}`;
@@ -384,8 +588,21 @@ export class FakeBackendInterceptor implements HttpInterceptor {
 
         function getRefreshToken() {
             // get refresh token from cookie
-            return (document.cookie.split(';').find(x => x.includes('fakeRefreshToken')) || '=').split('=')[1];
+
+            // return (document.cookie.split(';').find(x => x.includes('fakeRefreshToken')) || '=').split('=')[1];
+
+            const cookies = document.cookie.split('; ');
+            const refreshTokenCookie = cookies.find(row => row.startsWith('fakeRefreshToken='));
+            return refreshTokenCookie ? refreshTokenCookie.split('=')[1] : '';
         }
+
+        // --- START NEW PUBLIC HANDLER FUNCTION ---
+        function getAllAccountsPublic() {
+            // No authentication check needed for this public route.
+            // Return basic details only to avoid exposing sensitive info like passwords/tokens.
+            return ok(accounts.map(x => basicDetails(x)));
+        }
+        // --- END NEW PUBLIC HANDLER FUNCTION ---
     }
 }
 

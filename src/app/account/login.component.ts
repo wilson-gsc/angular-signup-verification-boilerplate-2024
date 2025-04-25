@@ -1,10 +1,12 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { first } from 'rxjs/operators';
 
 import { AccountService, AlertService } from '../_services';
 
+const accountsKey = 'angular-19-boilerplate-accounts'; // Make sure key is accessible or defined here
 @Component({
     templateUrl: 'login.component.html',
     standalone: false
@@ -19,7 +21,8 @@ export class LoginComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private accountService: AccountService,
-        private alertService: AlertService
+        private alertService: AlertService,
+        private http: HttpClient
     ) { }
 
     ngOnInit() {
@@ -27,6 +30,25 @@ export class LoginComponent implements OnInit {
             email: ['', [Validators.required, Validators.email]],
             password: ['', Validators.required]
         });
+
+        // --- TEST THE PUBLIC API ENDPOINT ---
+        // Construct the URL correctly (relative or using environment.apiUrl)
+        // Since fake backend intercepts based on url.endsWith, a relative path is fine here.
+        // If you had a real backend, you'd use `${environment.apiUrl}/accounts/all`
+        const apiUrl = `/accounts/all`; // Relative path for fake backend
+
+        console.log('Attempting to fetch public accounts from:', apiUrl);
+
+        this.http.get<any[]>(apiUrl).subscribe({ // Expect an array
+            next: (accounts) => {
+                console.log('Successfully fetched public accounts:', accounts);
+                // You could display these somewhere in your template if needed
+            },
+            error: (error) => {
+                console.error('Error fetching public accounts:', error);
+            }
+        });
+        // --- END TEST ---
     }
 
     // convenience getter for easy access to form fields
@@ -57,5 +79,10 @@ export class LoginComponent implements OnInit {
                     this.loading = false;
                 }
             });
+    }
+
+    resetFakeBackendStorage() {
+        localStorage.removeItem(accountsKey);
+        location.reload();
     }
 }

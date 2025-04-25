@@ -14,7 +14,9 @@ const routes: Routes = [
     { path: 'account', loadChildren: accountModule },
     { path: 'profile', loadChildren: profileModule, canActivate: [AuthGuard] },
     { path: 'admin', loadChildren: adminModule, canActivate: [AuthGuard], data: { roles: [Role.Admin] } },
-
+    { path: 'employees', loadChildren: () => import('./employees/employees.module').then(m => m.EmployeesModule), canActivate: [AuthGuard] },
+    { path: 'departments', loadChildren: () => import('./departments/departments.module').then(m => m.DepartmentsModule), canActivate: [AuthGuard] },
+    { path: 'workflows', loadChildren: () => import('./workflows/workflows.module').then(m => m.WorkflowsModule), canActivate: [AuthGuard] },
     // otherwise redirect to home
     { path: '**', redirectTo: '' }
 ];

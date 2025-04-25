@@ -56,8 +56,14 @@ export class RegisterComponent implements OnInit {
         this.accountService.register(this.form.value)
             .pipe(first())
             .subscribe({
-                next: () => {
+                next: (response: any) => {
                     this.alertService.success('Registration successful, please check your email for verification instructions', { keepAfterRouteChange: true });
+                    // Check the flag returned from the fake backend
+                    // if (response && response.isFirstUser) {
+                    //     this.alertService.success('Admin registration successful. You can login directly.', { keepAfterRouteChange: true });
+                    // } else {
+                    //     this.alertService.success('Registration successful, please check your email for verification instructions.', { keepAfterRouteChange: true });
+                    // }
                     this.router.navigate(['../login'], { relativeTo: this.route });
                 },
                 error: error => {

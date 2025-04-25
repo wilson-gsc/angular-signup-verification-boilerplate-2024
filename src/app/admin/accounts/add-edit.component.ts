@@ -3,8 +3,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { first } from 'rxjs/operators';
 
-import { AccountService, AlertService } from '@app/_services';
-import { MustMatch } from '@app/_helpers';
+import { AccountService, AlertService } from '../../_services';
+import { MustMatch } from '../../_helpers';
 
 @Component({
     templateUrl: 'add-edit.component.html',
@@ -34,9 +34,10 @@ export class AddEditComponent implements OnInit {
             firstName: ['', Validators.required],
             lastName: ['', Validators.required],
             email: ['', [Validators.required, Validators.email]],
-            role: ['', Validators.required],
+            role: ['User', Validators.required],
             password: ['', [Validators.minLength(6), this.isAddMode ? Validators.required : Validators.nullValidator]],
-            confirmPassword: ['']
+            confirmPassword: [''],
+            status: ['InActive']
         }, {
             validator: MustMatch('password', 'confirmPassword')
         });

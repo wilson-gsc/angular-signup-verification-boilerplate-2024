@@ -9,3 +9,12 @@ How to clear the accounts stored in local storage?
         localStorage.removeItem('angular-19-boilerplate-accounts');
     - To confirm, you can type:
         localStorage.getItem('angular-19-boilerplate-accounts');
+
+
+https://angular.io/guide/deployment
+
+created branch gh-pages
+
+git checkout -b gh-pages
+ng build --output-path docs --base-href /angular-signup-verification-boilerplate-2024/
+git push --set-upstream origin gh-pages
